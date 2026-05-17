@@ -44,8 +44,6 @@ class Settings:
     GEMINI_MAX_RETRIES = int(os.getenv("GEMINI_MAX_RETRIES", "3"))
 
     FFMPEG_PATH = os.getenv("FFMPEG_PATH")
-    # Colonne date agenda en base (schéma : date_modifiction)
-    SUPABASE_AGENDA_DATE_COLUMN = os.getenv("SUPABASE_AGENDA_DATE_COLUMN", "date_modifiction")
 
 
 _TTS_VOICE_MAP = _build_tts_voice_map()

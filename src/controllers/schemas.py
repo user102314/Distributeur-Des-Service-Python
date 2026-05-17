@@ -3,46 +3,33 @@ from typing import Optional
 from datetime import datetime
 
 
-# ---- AGENDA ----
-class AgendaCreate(BaseModel):
-    titre: str
-    note: str
-    etat: bool = False
-    contenu: str
-    date_modification: Optional[datetime] = None
-
-
-class AgendaUpdate(BaseModel):
-    titre: Optional[str] = None
-    note: Optional[str] = None
-    etat: Optional[bool] = None
-    contenu: Optional[str] = None
-    date_modification: Optional[datetime] = None
-
-
 # ---- NOTE / ACTIVITÉS (table note) ----
 class ActivityCreate(BaseModel):
     note: str
     etat: bool = False
     date: Optional[datetime] = None
+    idkoda: str = ""
 
 
 class ActivityUpdate(BaseModel):
     note: Optional[str] = None
     etat: Optional[bool] = None
     date: Optional[datetime] = None
+    idkoda: Optional[str] = None
 
 
 class NoteCreate(BaseModel):
     note: str
     etat: bool = False
     date: Optional[datetime] = None
+    idkoda: str = ""
 
 
 class NoteUpdate(BaseModel):
     note: Optional[str] = None
     etat: Optional[bool] = None
     date: Optional[datetime] = None
+    idkoda: Optional[str] = None
 
 
 # ---- SETTING ----
@@ -73,7 +60,7 @@ class UtilisateurUpdate(BaseModel):
     idkoda: Optional[str] = None
 
 
-# ---- IMAGE UTILISATEUR (reconnaissance faciale, etc.) ----
+# ---- IMAGE UTILISATEUR ----
 class ImageUserCreate(BaseModel):
     iduser: int
     url: str
@@ -107,6 +94,7 @@ class ConversationCreate(BaseModel):
     reponce: str = ""
     typedequestion: str = ""
     iduser: int
+    idkoda: str = ""
     date: Optional[datetime] = None
 
 
@@ -115,6 +103,7 @@ class ConversationUpdate(BaseModel):
     reponce: Optional[str] = None
     typedequestion: Optional[str] = None
     iduser: Optional[int] = None
+    idkoda: Optional[str] = None
     date: Optional[datetime] = None
 
 
@@ -123,6 +112,7 @@ class HistoriqueCreate(BaseModel):
     question: str
     reponce: str = ""
     type_question: str = ""
+    idkoda: str = ""
 
 
 # ---- INFORMATION PERSONNELLE ----
@@ -130,6 +120,8 @@ class InformationPersonelleCreate(BaseModel):
     question: str
     reponce: str = ""
     iduser: int
+    idkoda: str = ""
+    idconv: Optional[int] = None
     date: Optional[datetime] = None
 
 
@@ -137,6 +129,8 @@ class InformationPersonelleUpdate(BaseModel):
     question: Optional[str] = None
     reponce: Optional[str] = None
     iduser: Optional[int] = None
+    idkoda: Optional[str] = None
+    idconv: Optional[int] = None
     date: Optional[datetime] = None
 
 

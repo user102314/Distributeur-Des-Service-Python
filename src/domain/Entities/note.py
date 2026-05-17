@@ -9,3 +9,4 @@ class Note:
     note: str
     etat: bool
     date: Optional[datetime] = None
+    idkoda: str = ""

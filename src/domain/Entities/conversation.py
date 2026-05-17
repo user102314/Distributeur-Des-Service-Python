@@ -1,12 +1,14 @@
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Optional
 
 
 @dataclass
 class Conversation:
-    id: int
+    idconv: int
     question: str
     reponce: str
     date: datetime
     typedequestion: str
     iduser: int
+    idkoda: str

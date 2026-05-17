@@ -3,9 +3,9 @@ from dataclasses import dataclass
 
 @dataclass
 class Setting:
-    """Table setting (schéma métier : clé primaire <c>id</c>)."""
+    """Table setting — clé primaire idkoda."""
 
-    id: int
+    idkoda: str
     name: str
     sexe: str
     date: str

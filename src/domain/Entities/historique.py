@@ -9,3 +9,4 @@ class Historique:
     question: str
     reponce: str
     type_question: str
+    idkoda: str

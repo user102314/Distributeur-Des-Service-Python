@@ -4,8 +4,6 @@ from src.application.app_service_impl import ApiServiceImpl
 from src.controllers.schemas import (
     AccompagnementCreate,
     AccompagnementUpdate,
-    AgendaCreate,
-    AgendaUpdate,
     ActivityCreate,
     ActivityUpdate,
     AuthentificationCreate,
@@ -138,9 +136,9 @@ def list_conversations():
     return service.get_all_conversations()
 
 
-@router.get("/conversations/{conversation_id}", summary="Obtenir une conversation")
-def get_conversation(conversation_id: int):
-    row = service.get_conversation(conversation_id)
+@router.get("/conversations/{idconv}", summary="Obtenir une conversation")
+def get_conversation(idconv: int):
+    row = service.get_conversation(idconv)
     if not row:
         raise HTTPException(status_code=404, detail="Conversation introuvable")
     return row
@@ -151,17 +149,17 @@ def create_conversation(data: ConversationCreate):
     return service.create_conversation(data.model_dump(exclude_none=True))
 
 
-@router.put("/conversations/{conversation_id}", summary="Mettre à jour une conversation")
-def update_conversation(conversation_id: int, data: ConversationUpdate):
+@router.put("/conversations/{idconv}", summary="Mettre à jour une conversation")
+def update_conversation(idconv: int, data: ConversationUpdate):
     payload = data.model_dump(exclude_none=True)
     if not payload:
         raise HTTPException(status_code=400, detail="Aucune donnée fournie")
-    return service.update_conversation(conversation_id, payload)
+    return service.update_conversation(idconv, payload)
 
 
-@router.delete("/conversations/{conversation_id}", summary="Supprimer une conversation")
-def delete_conversation(conversation_id: int):
-    return service.delete_conversation(conversation_id)
+@router.delete("/conversations/{idconv}", summary="Supprimer une conversation")
+def delete_conversation(idconv: int):
+    return service.delete_conversation(idconv)
 
 # ==============================================================
 # ENDPOINTS NOTES
@@ -336,36 +334,7 @@ def trigger_n8n_workflow(payload: dict):
     return service.send_to_n8n(payload)
 
 # ==============================================================
-# ENDPOINTS AGENDA (CRUD complet)
-# ==============================================================
-@router.get("/agendas", summary="Lister tous les agendas")
-def get_agendas():
-    return service.get_all_agendas()
-
-@router.get("/agendas/{agenda_id}", summary="Obtenir un agenda par ID")
-def get_agenda(agenda_id: int):
-    result = service.get_agenda(agenda_id)
-    if not result:
-        raise HTTPException(status_code=404, detail="Agenda introuvable")
-    return result
-
-@router.post("/agendas", summary="Créer un agenda", status_code=201)
-def create_agenda(data: AgendaCreate):
-    return service.create_agenda(data.model_dump(exclude_none=True))
-
-@router.put("/agendas/{agenda_id}", summary="Mettre à jour un agenda")
-def update_agenda(agenda_id: int, data: AgendaUpdate):
-    payload = data.model_dump(exclude_none=True)
-    if not payload:
-        raise HTTPException(status_code=400, detail="Aucune donnée fournie")
-    return service.update_agenda(agenda_id, payload)
-
-@router.delete("/agendas/{agenda_id}", summary="Supprimer un agenda")
-def delete_agenda(agenda_id: int):
-    return service.delete_agenda(agenda_id)
-
-# ==============================================================
-# ENDPOINTS ACTIVITY (CRUD complet)
+# ENDPOINTS ACTIVITY (alias table note, rétrocompatibilité)
 # ==============================================================
 @router.get("/activities", summary="Lister toutes les activités")
 def get_activities():

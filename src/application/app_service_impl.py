@@ -109,18 +109,18 @@ class ApiServiceImpl(IApiService):
     def get_all_conversations(self):
         return self.client.table("conversation").select("*").order("date", desc=True).execute().data
 
-    def get_conversation(self, conversation_id: int):
-        res = self.client.table("conversation").select("*").eq("id", conversation_id).execute().data
+    def get_conversation(self, idconv: int):
+        res = self.client.table("conversation").select("*").eq("idconv", idconv).execute().data
         return res[0] if res else None
 
     def create_conversation(self, data: dict):
         return self.client.table("conversation").insert(self._fix_booleans(data)).execute().data
 
-    def update_conversation(self, conversation_id: int, data: dict):
-        return self.client.table("conversation").update(self._fix_booleans(data)).eq("id", conversation_id).execute().data
+    def update_conversation(self, idconv: int, data: dict):
+        return self.client.table("conversation").update(self._fix_booleans(data)).eq("idconv", idconv).execute().data
 
-    def delete_conversation(self, conversation_id: int):
-        return self.client.table("conversation").delete().eq("id", conversation_id).execute().data
+    def delete_conversation(self, idconv: int):
+        return self.client.table("conversation").delete().eq("idconv", idconv).execute().data
 
     # --- NOTES ---
     def get_all_notes(self):
@@ -144,16 +144,16 @@ class ApiServiceImpl(IApiService):
         return self.client.table("note").update({"etat": val}).eq("id", note_id).execute().data
 
     # --- SETTINGS ---
-    def _primary_setting_id(self) -> Optional[int]:
-        """Clé primaire de la ligne setting (colonne id)."""
-        res = self.client.table("setting").select("id").limit(1).execute().data
+    def _primary_setting_idkoda(self) -> Optional[str]:
+        """Clé primaire de la ligne setting (colonne idkoda)."""
+        res = self.client.table("setting").select("idkoda").limit(1).execute().data
         if not res:
             return None
-        v = res[0].get("id")
-        try:
-            return int(v) if v is not None else None
-        except (TypeError, ValueError):
+        v = res[0].get("idkoda")
+        if v is None:
             return None
+        s = str(v).strip()
+        return s or None
 
     def get_settings(self):
         res = self.client.table("setting").select("*").limit(1).execute().data
@@ -161,10 +161,10 @@ class ApiServiceImpl(IApiService):
 
     def modify_settings(self, settings_data: dict):
         fixed_data = self._fix_booleans(settings_data)
-        sid = self._primary_setting_id()
-        if sid is None:
+        idkoda = self._primary_setting_idkoda()
+        if not idkoda:
             return None
-        return self.client.table("setting").update(fixed_data).eq("id", sid).execute().data
+        return self.client.table("setting").update(fixed_data).eq("idkoda", idkoda).execute().data
 
     def _get_robot_langue_from_setting(self):
         """Locale BCP‑47 ou identifiant de langue (ex. ar-SA, fr-FR) stockée dans setting.langue."""
@@ -276,37 +276,9 @@ class ApiServiceImpl(IApiService):
     def delete_authentification(self, idproduit: int):
         return self.client.table("authentification").delete().eq("idproduit", idproduit).execute().data
 
-    def _agenda_db_payload(self, data: dict) -> dict:
-        """Mappe date_modification (API) vers le nom de colonne réel en base (ex. date_modifiction)."""
-        d = self._fix_booleans(data.copy())
-        col = settings.SUPABASE_AGENDA_DATE_COLUMN
-        if col and col != "date_modification" and "date_modification" in d:
-            d[col] = d.pop("date_modification")
-        return d
-
     # --- INTEGRATION N8N ---
     def send_to_n8n(self, payload: dict):
         return self.n8n.trigger_workflow(payload)
-
-    # =========================================================
-    # --- AGENDA ---
-    # =========================================================
-    def get_all_agendas(self):
-        sort_col = settings.SUPABASE_AGENDA_DATE_COLUMN or "date_modifiction"
-        return self.client.table("agenda").select("*").order(sort_col, desc=True).execute().data
-
-    def get_agenda(self, agenda_id: int):
-        res = self.client.table("agenda").select("*").eq("id", agenda_id).execute().data
-        return res[0] if res else None
-
-    def create_agenda(self, data: dict):
-        return self.client.table("agenda").insert(self._agenda_db_payload(data)).execute().data
-
-    def update_agenda(self, agenda_id: int, data: dict):
-        return self.client.table("agenda").update(self._agenda_db_payload(data)).eq("id", agenda_id).execute().data
-
-    def delete_agenda(self, agenda_id: int):
-        return self.client.table("agenda").delete().eq("id", agenda_id).execute().data
 
     # =========================================================
     # --- SMART NOTES (Mappé sur la table 'note') ---
@@ -380,15 +352,15 @@ class ApiServiceImpl(IApiService):
     # --- POWER ON / OFF ---
     # =========================================================
     def power_off(self):
-        sid = self._primary_setting_id()
-        if sid is not None:
-            self.client.table("setting").update({"etat": 0}).eq("id", sid).execute()
+        idkoda = self._primary_setting_idkoda()
+        if idkoda:
+            self.client.table("setting").update({"etat": 0}).eq("idkoda", idkoda).execute()
         return {"status": "power_off", "etat": 0}
 
     def power_on(self):
-        sid = self._primary_setting_id()
-        if sid is not None:
-            self.client.table("setting").update({"etat": 1}).eq("id", sid).execute()
+        idkoda = self._primary_setting_idkoda()
+        if idkoda:
+            self.client.table("setting").update({"etat": 1}).eq("idkoda", idkoda).execute()
         return {"status": "power_on", "etat": 1}
 
     # =========================================================
