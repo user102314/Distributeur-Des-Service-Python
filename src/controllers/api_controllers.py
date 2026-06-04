@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Query
 from fastapi.responses import StreamingResponse
 from src.application.app_service_impl import ApiServiceImpl
 from src.controllers.schemas import (
@@ -16,6 +16,7 @@ from src.controllers.schemas import (
     ImageUserCreate,
     ImageUserUpdate,
     LoginRequest,
+    NomWebhookRequest,
     NoteCreate,
     NoteUpdate,
     SettingUpdate,
@@ -26,6 +27,29 @@ from src.controllers.schemas import (
 
 router = APIRouter()
 service = ApiServiceImpl()
+
+
+@router.get("/db-test", summary="Test de connexion à Supabase")
+def db_test():
+    """Lit une ligne sur la table setting pour vérifier que la base répond."""
+    from src.infrastructure.database import get_supabase_client
+
+    try:
+        client = get_supabase_client()
+        res = client.table("setting").select("*").limit(1).execute()
+        rows = res.data or []
+        return {
+            "status": "ok",
+            "database": "connected",
+            "table": "setting",
+            "rows_sampled": len(rows),
+        }
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Connexion base de données échouée: {exc}",
+        ) from exc
+
 
 # ==============================================================
 # ENDPOINTS UTILISATEURS
@@ -132,8 +156,18 @@ def get_convs():
 
 
 @router.get("/conversations", summary="Lister toutes les conversations")
-def list_conversations():
-    return service.get_all_conversations()
+def list_conversations(
+    date_from: str | None = Query(None, description="Date début (YYYY-MM-DD)"),
+    date_to: str | None = Query(None, description="Date fin (YYYY-MM-DD)"),
+):
+    from datetime import datetime as dt
+
+    try:
+        df = dt.fromisoformat(date_from) if date_from else None
+        dte = dt.fromisoformat(date_to) if date_to else None
+        return service.get_all_conversations(date_from=df, date_to=dte)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"Base de données indisponible: {exc}") from exc
 
 
 @router.get("/conversations/{idconv}", summary="Obtenir une conversation")
@@ -288,7 +322,16 @@ def delete_accompagnement(accompagnement_id: int):
 # ==============================================================
 @router.post("/auth/login", summary="Connexion client (email + mot de passe)")
 def auth_login(data: LoginRequest):
-    result = service.login(data.emailclient.strip(), data.motdepasse)
+    try:
+        result = service.login(data.emailclient.strip(), data.motdepasse)
+    except Exception as exc:
+        exc_name = type(exc).__name__
+        if "Timeout" in exc_name or "Connect" in exc_name:
+            raise HTTPException(
+                status_code=503,
+                detail="Base de données Supabase injoignable (timeout réseau). Réessayez dans quelques secondes.",
+            ) from exc
+        raise
     if not result:
         raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
     return {"status": "ok", "data": result}
@@ -332,6 +375,19 @@ def delete_auth(idproduit: int):
 def trigger_n8n_workflow(payload: dict):
     """Envoie n'importe quelle donnée à n8n (ex: une question pour traitement IA)"""
     return service.send_to_n8n(payload)
+
+
+@router.post("/webhook/nom", summary="Envoyer un nom au webhook n8n dédié")
+def trigger_nom_webhook(data: NomWebhookRequest):
+    """
+    Reçoit un **nom**, l'envoie au webhook n8n configuré
+    (``N8N_NOM_WEBHOOK_URL``, défaut : localhost:5678/webhook/7f1955c0-...)
+    et retourne la réponse du workflow.
+    """
+    result = service.send_nom_to_webhook(data.nom)
+    if isinstance(result, dict) and result.get("status") == "error":
+        raise HTTPException(status_code=502, detail=result.get("message", "Erreur webhook n8n"))
+    return {"status": "ok", "nom": data.nom.strip(), "data": result}
 
 # ==============================================================
 # ENDPOINTS ACTIVITY (alias table note, rétrocompatibilité)

@@ -103,11 +103,36 @@ class ApiServiceImpl(IApiService):
         return self.client.table("historique").delete().eq("id", historique_id).execute().data
 
     # --- CONVERSATIONS ---
-    def get_last_100_conversations(self):
-        return self.client.table("conversation").select("*").order("date", desc=True).limit(100).execute().data
+    @staticmethod
+    def _normalize_conversation_row(row: dict) -> dict:
+        if row.get("idconv") is None and row.get("id") is not None:
+            row["idconv"] = row["id"]
+        raw = row.get("date")
+        if raw is not None:
+            if isinstance(raw, str):
+                row["date"] = raw.split("T")[0][:10]
+            else:
+                row["date"] = str(raw)[:10]
+        return row
 
-    def get_all_conversations(self):
-        return self.client.table("conversation").select("*").order("date", desc=True).execute().data
+    def get_last_100_conversations(self):
+        rows = self.client.table("conversation").select("*").order("date", desc=True).limit(100).execute().data or []
+        return [self._normalize_conversation_row(row) for row in rows]
+
+    def get_all_conversations(self, date_from=None, date_to=None):
+        try:
+            query = self.client.table("conversation").select("*")
+            if date_from is not None:
+                d0 = date_from.date().isoformat() if hasattr(date_from, "date") else str(date_from)[:10]
+                query = query.gte("date", d0)
+            if date_to is not None:
+                d1 = date_to.date().isoformat() if hasattr(date_to, "date") else str(date_to)[:10]
+                query = query.lte("date", d1)
+            rows = query.order("date", desc=True).execute().data or []
+            return [self._normalize_conversation_row(row) for row in rows]
+        except Exception as exc:
+            safe_console_line(f"[conversation] get_all_conversations: {exc}")
+            return self.get_last_100_conversations()
 
     def get_conversation(self, idconv: int):
         res = self.client.table("conversation").select("*").eq("idconv", idconv).execute().data
@@ -240,14 +265,29 @@ class ApiServiceImpl(IApiService):
 
     # --- AUTHENTIFICATION ---
     def login(self, emailclient: str, motdepasse: str):
-        res = (
-            self.client.table("authentification")
-            .select("*")
-            .eq("emailclient", emailclient)
-            .limit(1)
-            .execute()
-            .data
-        )
+        last_error: Exception | None = None
+        for attempt in range(2):
+            try:
+                res = (
+                    self.client.table("authentification")
+                    .select("*")
+                    .eq("emailclient", emailclient)
+                    .limit(1)
+                    .execute()
+                    .data
+                )
+                break
+            except (httpx.ConnectTimeout, httpx.ReadTimeout, httpx.ConnectError) as exc:
+                last_error = exc
+                safe_console_line(f"[auth] Supabase tentative {attempt + 1}/2: {exc}")
+                if attempt == 0:
+                    time.sleep(1)
+                    continue
+                raise
+        else:
+            if last_error:
+                raise last_error
+            res = []
         if not res:
             return None
         row = res[0]
@@ -279,6 +319,9 @@ class ApiServiceImpl(IApiService):
     # --- INTEGRATION N8N ---
     def send_to_n8n(self, payload: dict):
         return self.n8n.trigger_workflow(payload)
+
+    def send_nom_to_webhook(self, nom: str):
+        return self.n8n.trigger_nom_webhook(nom)
 
     # =========================================================
     # --- SMART NOTES (Mappé sur la table 'note') ---

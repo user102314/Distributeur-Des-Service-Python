@@ -151,3 +151,9 @@ class AuthentificationUpdate(BaseModel):
 class LoginRequest(BaseModel):
     emailclient: str
     motdepasse: str
+
+
+class NomWebhookRequest(BaseModel):
+    """Corps pour POST /api/webhook/nom — déclenche le workflow n8n par nom."""
+
+    nom: str = Field(..., min_length=1, description="Nom envoyé au webhook n8n")
